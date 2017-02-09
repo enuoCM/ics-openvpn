@@ -23,7 +23,7 @@ import de.blinkt.openvpn.VpnProfile;
 public class VpnStatus {
 
 
-    public static LinkedList<LogItem> logbuffer;
+    private static final LinkedList<LogItem> logbuffer;
 
     private static Vector<LogListener> logListener;
     private static Vector<StateListener> stateListener;
@@ -39,6 +39,8 @@ public class VpnStatus {
     private static HandlerThread mHandlerThread;
 
     private static String mLastConnectedVPNUUID;
+    static boolean readFileLog =false;
+    final static java.lang.Object readFileLock = new Object();
 
     public static void logException(LogLevel ll, String context, Exception e) {
         StringWriter sw = new StringWriter();
@@ -373,7 +375,7 @@ public class VpnStatus {
         for (StateListener sl : stateListener) {
             sl.updateState(state, msg, resid, level);
         }
-        //newLogItem(new LogItem((LogLevel.DEBUG), String.format("New OpenVPN Status (%s->%s): %s",state,level.toString(),msg)));
+        newLogItem(new LogItem((LogLevel.DEBUG), String.format("New OpenVPN Status (%s->%s): %s",state,level.toString(),msg)));
     }
 
     public static void logInfo(String message) {

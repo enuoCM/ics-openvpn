@@ -259,6 +259,7 @@ public class ConfigParser {
             "dhcp-renew",
             "dh",
             "group",
+            "allow-recursive-routing",
             "ip-win32",
             "management-hold",
             "management",
@@ -425,6 +426,7 @@ public class ConfigParser {
         Vector<String> tlscrypt = getOption("tls-crypt", 1, 1);
         if (tlscrypt!=null) {
             np.mUseTLSAuth = true;
+            np.mTLSAuthFilename = tlscrypt.get(1);
             np.mTLSAuthDirection = "tls-crypt";
         }
 

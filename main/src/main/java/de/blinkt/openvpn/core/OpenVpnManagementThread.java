@@ -12,6 +12,7 @@ import android.net.LocalSocketAddress;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import android.support.annotation.NonNull;
+import android.text.TextUtils;
 import android.util.Log;
 
 import junit.framework.Assert;
@@ -141,7 +142,7 @@ public class OpenVpnManagementThread implements Runnable, OpenVPNManagement {
             // Close the management socket after client connected
             try {
                 mServerSocket.close();
-            } catch (IOException e){
+            } catch (IOException e) {
                 VpnStatus.logException(e);
             }
 
@@ -337,15 +338,15 @@ public class OpenVpnManagementThread implements Runnable, OpenVPNManagement {
                 VpnStatus.updateStateString("CONNECTRETRY", String.valueOf(waittime),
                         R.string.state_waitconnectretry, ConnectionStatus.LEVEL_CONNECTING_NO_SERVER_REPLY_YET);
             mResumeHandler.postDelayed(mResumeHoldRunnable, waittime * 1000);
-            if (waittime > 5) {
+            if (waittime > 5)
                 VpnStatus.logInfo(R.string.state_waitconnectretry, String.valueOf(waittime));
+            else
+                VpnStatus.logDebug(R.string.state_waitconnectretry, String.valueOf(waittime));
 
-            }
         } else {
             mWaitingForRelease = true;
 
             VpnStatus.updateStatePause(lastPauseReason);
-
 
         }
     }
@@ -436,6 +437,7 @@ public class OpenVpnManagementThread implements Runnable, OpenVPNManagement {
                 protectFileDescriptor(fdtoprotect);
                 break;
             case "DNSSERVER":
+            case "DNS6SERVER":
                 mOpenVPNService.addDNS(extra);
                 break;
             case "DNSDOMAIN":
@@ -563,15 +565,17 @@ public class OpenVpnManagementThread implements Runnable, OpenVPNManagement {
         if (needed.equals("Private Key")) {
             pw = mProfile.getPasswordPrivateKey();
         } else if (needed.equals("Auth")) {
+            pw = mProfile.getPasswordAuth();
+
             String usercmd = String.format("username '%s' %s\n",
                     needed, VpnProfile.openVpnEscape(mProfile.mUsername));
             managmentCommand(usercmd);
-            pw = mProfile.getPasswordAuth();
         }
         if (pw != null) {
             String cmd = String.format("password '%s' %s\n", needed, VpnProfile.openVpnEscape(pw));
             managmentCommand(cmd);
         } else {
+            mOpenVPNService.requestInputFromUser(R.string.password, needed);
             VpnStatus.logError(String.format("Openvpn requires Authentication type '%s' but no password/key information available", needed));
         }
 

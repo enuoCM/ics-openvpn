@@ -10,13 +10,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
+import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
+
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Created by arne on 09.11.16.
  */
 
-public class StatusListener  {
+public class StatusListener {
+    private File mCacheDir;
     private ServiceConnection mConnection = new ServiceConnection() {
 
 
@@ -28,13 +34,30 @@ public class StatusListener  {
             try {
                 /* Check if this a local service ... */
                 if (service.queryLocalInterface("de.blinkt.openvpn.core.IServiceStatus") == null) {
+                    // Not a local service
                     VpnStatus.setConnectedVPNProfile(serviceStatus.getLastConnectedVPN());
-                    serviceStatus.registerStatusCallback(mCallback);
+                    ParcelFileDescriptor pfd = serviceStatus.registerStatusCallback(mCallback);
+                    DataInputStream fd = new DataInputStream(new ParcelFileDescriptor.AutoCloseInputStream(pfd));
 
+                    short len = fd.readShort();
+                    byte[] buf = new byte[65336];
+                    while (len != 0x7fff) {
+                        fd.readFully(buf, 0, len);
+                        LogItem logitem = new LogItem(buf, len);
+                        VpnStatus.newLogItem(logitem, false);
+                        len = fd.readShort();
+                    }
+                    fd.close();
+
+
+
+                } else {
+                    VpnStatus.initLogCache(mCacheDir);
                 }
 
-            } catch (RemoteException e) {
+            } catch (RemoteException | IOException e) {
                 e.printStackTrace();
+                VpnStatus.logException(e);
             }
         }
 
@@ -45,11 +68,11 @@ public class StatusListener  {
 
     };
 
-    void init(Context c)
-    {
+    void init(Context c) {
 
         Intent intent = new Intent(c, OpenVPNStatusService.class);
         intent.setAction(OpenVPNService.START_SERVICE);
+        mCacheDir = c.getCacheDir();
 
         c.bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 
